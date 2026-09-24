@@ -27,6 +27,7 @@ function App() {
   const [documents, setDocuments] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [dragActive, setDragActive] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [authMode, setAuthMode] = useState("login");
   const [authName, setAuthName] = useState("");
@@ -284,6 +285,8 @@ function App() {
       await loadDocuments(
         selectedSessionId
       );
+
+      setMobileMenuOpen(false);
     } catch (error) {
       console.error(
         "Load session error:",
@@ -337,6 +340,7 @@ function App() {
     setDocuments([]);
     setDocumentName("");
     setFile(null);
+    setMobileMenuOpen(false);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -1251,40 +1255,213 @@ function App() {
         </div>
       </aside>
 
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/70"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          <aside className="absolute left-0 top-0 bottom-0 w-[88%] max-w-sm bg-slate-950 border-r border-slate-800 flex flex-col shadow-2xl">
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold">
+                  AI
+                </div>
+
+                <div>
+                  <h1 className="font-semibold">Research Assistant</h1>
+                  <p className="text-xs text-slate-500">Multi-model RAG</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-9 h-9 flex items-center justify-center bg-slate-900 border border-slate-800 rounded-lg text-xl"
+                aria-label="Close menu"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4">
+                <button
+                  onClick={newChat}
+                  className="w-full bg-blue-600 hover:bg-blue-500 rounded-xl py-3 font-medium transition"
+                >
+                  + New Chat
+                </button>
+              </div>
+
+              <div className="px-4 pb-5">
+                <h2 className="text-xs uppercase tracking-wider text-slate-500 mb-3">
+                  Upload PDF
+                </h2>
+
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-xl p-4 text-center transition ${
+                    dragActive
+                      ? "border-blue-500 bg-blue-500/10"
+                      : "border-slate-700 bg-slate-900"
+                  }`}
+                >
+                  <p className="text-sm text-slate-300">Select a PDF</p>
+
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="mobile-pdf-upload"
+                  />
+
+                  <label
+                    htmlFor="mobile-pdf-upload"
+                    className="inline-block mt-3 cursor-pointer text-sm bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg transition"
+                  >
+                    Choose PDF
+                  </label>
+
+                  {file && (
+                    <p className="text-xs text-blue-400 mt-3 break-all">
+                      {file.name}
+                    </p>
+                  )}
+
+                  <button
+                    onClick={uploadPDF}
+                    disabled={!file || uploading || !sessionId}
+                    className="w-full mt-3 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-800 disabled:text-slate-500 rounded-lg py-2 text-sm transition"
+                  >
+                    {uploading ? "Uploading..." : "Upload PDF"}
+                  </button>
+                </div>
+
+                {uploadMessage && (
+                  <p className="text-xs text-slate-400 mt-2">
+                    {uploadMessage}
+                  </p>
+                )}
+              </div>
+
+              <div className="px-4 pb-5">
+                <h2 className="text-xs uppercase tracking-wider text-slate-500 mb-3">
+                  Documents
+                </h2>
+
+                <div className="space-y-2">
+                  {documents.length === 0 ? (
+                    <p className="text-sm text-slate-600">No documents</p>
+                  ) : (
+                    documents.map((document) => (
+                      <div
+                        key={document.filename}
+                        className="bg-slate-900 border border-slate-800 rounded-lg p-3 flex items-start justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm text-slate-300 truncate">
+                            {document.filename}
+                          </p>
+                          <p className="text-xs text-slate-600 mt-1">
+                            {document.chunk_count} chunks
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => deleteDocument(document.filename)}
+                          className="text-slate-600 hover:text-red-400"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="px-4 pb-5">
+                <h2 className="text-xs uppercase tracking-wider text-slate-500 mb-3">
+                  Chat History
+                </h2>
+
+                <div className="space-y-2">
+                  {sessions.length === 0 ? (
+                    <p className="text-sm text-slate-600">No chat history</p>
+                  ) : (
+                    sessions.map((session) => (
+                      <button
+                        key={session.session_id}
+                        onClick={() => loadSession(session.session_id)}
+                        className={`w-full text-left rounded-lg p-3 transition ${
+                          session.session_id === sessionId
+                            ? "bg-blue-500/10 border border-blue-500/30"
+                            : "bg-slate-900 border border-slate-800 hover:border-slate-700"
+                        }`}
+                      >
+                        <p className="text-sm text-slate-300 truncate">
+                          {session.title}
+                        </p>
+                        <p className="text-xs text-slate-600 mt-1">
+                          {session.message_count} messages
+                        </p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-slate-800 bg-slate-950">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{user?.name}</p>
+                  <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                </div>
+
+                <button
+                  onClick={logout}
+                  className="text-xs px-3 py-2 bg-slate-800 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+
       <main className="flex-1 min-w-0 flex flex-col h-screen">
         <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold">
-              AI Research Assistant
-            </h2>
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden w-10 h-10 shrink-0 flex items-center justify-center bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-xl text-xl"
+              aria-label="Open menu"
+            >
+              ☰
+            </button>
 
-            <p className="text-xs text-slate-500 hidden sm:block">
-              Ask questions, analyze PDFs
-              and search the web
-            </p>
+            <div className="min-w-0">
+              <h2 className="font-semibold truncate">AI Research Assistant</h2>
+              <p className="text-xs text-slate-500 hidden sm:block">
+                Ask questions, analyze PDFs and search the web
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={newChat}
-              className="lg:hidden text-sm bg-blue-600 hover:bg-blue-500 px-3 py-2 rounded-lg"
-            >
-              New
-            </button>
-
             <button
               onClick={clearChat}
               disabled={!sessionId}
               className="text-sm bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-2 rounded-lg disabled:opacity-50"
             >
               Clear
-            </button>
-
-            <button
-              onClick={logout}
-              className="lg:hidden text-sm bg-slate-900 hover:bg-red-500/10 hover:text-red-400 border border-slate-800 px-3 py-2 rounded-lg"
-            >
-              Logout
             </button>
           </div>
         </header>
